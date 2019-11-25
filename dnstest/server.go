@@ -13,17 +13,14 @@ import (
 type Server struct {
 	Addr string
 
+	// TODO: we can do either TCP/UDP, support either via intention
+	// default to using UDP as most clients expect this by default.
 	PacketConn net.PacketConn
 
 	Config *dns.Server
 
-	// wg counts the number of outstanding DNS requests on this server.
 	// Close blocks until all requests are finished.
 	wg sync.WaitGroup
-
-	// client is configured for use with the server.
-	// Its transport is automatically closed when Close is called.
-	client *dns.Client
 }
 
 // NewServer starts and returns a new Server.
@@ -48,9 +45,6 @@ func NewUnstartedServer(handler dns.Handler) *Server {
 
 // Start starts a server from NewUnstartedServer.
 func (s *Server) Start() {
-	if s.client == nil {
-		s.client = &dns.Client{}
-	}
 	s.Addr = s.PacketConn.LocalAddr().String()
 	s.goServe()
 }
@@ -60,6 +54,7 @@ func (s *Server) Start() {
 func (s *Server) Close() {
 	s.PacketConn.Close()
 	s.Config.Shutdown()
+
 	s.wg.Wait()
 }
 
